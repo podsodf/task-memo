@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>本日タスクメモ</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0f1419; --surface: #1a2230; --surface2: #212d40;
+      --border: #2d3f55; --border2: #3a5068;
+      --accent: #4a9eff; --accent2: #2d7dd2;
+      --gold: #e8c96e; --text: #e2eaf4; --text2: #8ba4bf; --text3: #5c7a96;
+      --green: #52c97a; --red: #e05a5a;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Noto Sans JP', sans-serif; min-height: 100vh; }
+    .app { display: flex; min-height: 100vh; }
+    .sidebar { width: 200px; background: var(--surface); border-right: 1px solid var(--border); padding: 28px 0; flex-shrink: 0; display: flex; flex-direction: column; gap: 4px; }
+    .main { flex: 1; padding: 36px 40px 80px; max-width: 820px; }
+    .logo { font-family: 'DM Serif Display', serif; font-size: 15px; color: var(--accent); letter-spacing: .08em; padding: 0 20px 24px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+    .logo span { display: block; font-family: 'Noto Sans JP', sans-serif; font-size: 9px; color: var(--text3); letter-spacing: .25em; text-transform: uppercase; margin-top: 3px; }
+    .nav-btn { display: flex; align-items: center; gap: 10px; padding: 10px 20px; font-size: 12.5px; color: var(--text2); background: none; border: none; cursor: pointer; font-family: inherit; letter-spacing: .04em; transition: all .15s; text-align: left; width: 100%; }
+    .nav-btn:hover { background: var(--surface2); color: var(--text); }
+    .nav-btn.on { background: var(--surface2); color: var(--accent); border-left: 2px solid var(--accent); }
+    .nav-icon { font-size: 14px; width: 18px; text-align: center; }
+    .page-title { font-family: 'DM Serif Display', serif; font-size: 26px; color: var(--text); letter-spacing: .04em; margin-bottom: 4px; }
+    .page-sub { font-size: 11px; color: var(--text3); letter-spacing: .2em; text-transform: uppercase; margin-bottom: 32px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 3px; padding: 20px; margin-bottom: 14px; }
+    .card-label { font-size: 10px; letter-spacing: .3em; text-transform: uppercase; color: var(--text3); font-weight: 600; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+    .card-label-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+    input[type=text], input[type=date], input[type=time], textarea {
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 2px;
+      color: var(--text); font-family: inherit; font-size: 13px; padding: 8px 11px;
+      outline: none; transition: border-color .15s; width: 100%;
+    }
+    input:focus, textarea:focus { border-color: var(--accent); background: #1e2d40; }
+    input::placeholder, textarea::placeholder { color: var(--text3); }
+    textarea { resize: vertical; line-height: 1.7; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; }
+    .field { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 100px; }
+    .field label { font-size: 11px; color: var(--text3); letter-spacing: .08em; }
+    .item-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .item-name { flex: 1; }
+    .item-time { width: 110px; }
+    .item-freq { width: 140px; font-size: 12px; }
+    .item-bullet { color: var(--accent); font-size: 13px; flex-shrink: 0; width: 14px; }
+    .task-item { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .task-bullet { color: var(--gold); font-size: 14px; flex-shrink: 0; }
+    .btn-icon { background: none; border: none; cursor: pointer; color: var(--text3); font-size: 14px; padding: 3px 6px; border-radius: 2px; transition: all .15s; line-height: 1; }
+    .btn-icon:hover { color: var(--red); background: rgba(224,90,90,.12); }
+    .btn-add { background: none; border: 1px dashed var(--border2); border-radius: 2px; padding: 6px 12px; font-size: 11px; color: var(--text3); cursor: pointer; font-family: inherit; letter-spacing: .06em; transition: all .15s; }
+    .btn-add:hover { border-color: var(--accent); color: var(--accent); background: rgba(74,158,255,.06); }
+    .btn-generate { width: 100%; background: var(--accent2); color: #fff; border: none; border-radius: 2px; padding: 14px; font-size: 14px; font-family: inherit; cursor: pointer; letter-spacing: .2em; font-weight: 500; transition: background .2s; }
+    .btn-generate:hover { background: var(--accent); }
+    .btn-save { background: var(--surface2); color: var(--text); border: 1px solid var(--border2); border-radius: 2px; padding: 10px 22px; font-size: 12px; font-family: inherit; cursor: pointer; letter-spacing: .12em; transition: all .2s; }
+    .btn-save:hover { background: var(--accent2); border-color: var(--accent2); color: #fff; }
+    .saved-msg { font-size: 12px; color: var(--green); margin-left: 12px; }
+    .output-card { background: #080c10; border: 1px solid var(--border); border-radius: 3px; padding: 24px; position: relative; margin-top: 20px; }
+    .output-label { font-size: 10px; letter-spacing: .3em; color: var(--text3); text-transform: uppercase; margin-bottom: 14px; }
+    .output-text { font-family: 'DM Mono', monospace; font-size: 12.5px; line-height: 2; color: #c8dff0; white-space: pre-wrap; word-break: break-word; }
+    .btn-copy { position: absolute; top: 16px; right: 16px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 2px; color: var(--text2); padding: 5px 14px; font-size: 11px; cursor: pointer; font-family: inherit; letter-spacing: .1em; transition: all .15s; }
+    .btn-copy:hover { background: var(--accent2); color: #fff; border-color: var(--accent2); }
+    .btn-copy.ok { background: #2d5a38; color: var(--green); border-color: #3a7048; }
+    .fixed-badge { font-size: 9px; background: var(--accent2); color: #fff; padding: 2px 7px; border-radius: 1px; letter-spacing: .1em; margin-left: 8px; }
+    .info-box { font-size: 11px; color: var(--accent); background: rgba(74,158,255,.08); border: 1px solid rgba(74,158,255,.2); border-radius: 2px; padding: 8px 12px; margin-bottom: 12px; letter-spacing: .04em; line-height: 1.6; }
+    .sep { border: none; border-top: 1px dashed var(--border); margin: 12px 0; }
+    .preset-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+    .preset-chip { background: var(--surface2); border: 1px solid var(--border2); border-radius: 2px; padding: 4px 12px; font-size: 11px; color: var(--text2); cursor: pointer; font-family: inherit; transition: all .15s; }
+    .preset-chip:hover { border-color: var(--accent); color: var(--accent); background: rgba(74,158,255,.08); }
+    .preset-chip.active { background: rgba(74,158,255,.15); border-color: var(--accent); color: var(--accent); }
+    /* template chips */
+    .tpl-area { margin-bottom: 10px; }
+    .tpl-label { font-size: 10px; color: var(--text3); letter-spacing: .15em; text-transform: uppercase; margin-bottom: 7px; }
+    .tpl-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+    .tpl-chip { background: var(--surface2); border: 1px solid var(--border2); border-radius: 2px; padding: 4px 12px; font-size: 11px; color: var(--gold); cursor: pointer; font-family: inherit; transition: all .15s; }
+    .tpl-chip:hover { background: rgba(232,201,110,.12); border-color: var(--gold); }
+    /* settings template list */
+    .tpl-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+    .tpl-item { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 2px; padding: 7px 11px; font-size: 13px; color: var(--text2); }
+    .tpl-add-row { display: flex; gap: 8px; margin-top: 8px; }
+    .tpl-add-in { flex: 1; }
+    .btn-tpl-add { background: var(--accent2); color: #fff; border: none; border-radius: 2px; padding: 8px 16px; font-size: 13px; font-family: inherit; cursor: pointer; white-space: nowrap; }
+    .btn-tpl-add:hover { background: var(--accent); }
+    @media (max-width: 600px) {
+      .sidebar { width: 56px; }
+      .nav-btn span { display: none; }
+      .logo { font-size: 0; padding: 0 0 16px; text-align: center; }
+      .logo::after { content: "📋"; font-size: 18px; display: block; }
+      .main { padding: 20px 16px 60px; }
+    }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+const DAYS = ["日","月","火","水","木","金","土"];
+const uid = () => Date.now() + Math.random();
+const nb = () => ({ id: uid(), name: "", time: "", freq: "" });
+const nt = () => ({ id: uid(), name: "" });
+const nr = () => ({ id: uid(), name: "" });
+
+function load(k, fb) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : fb; } catch { return fb; } }
+function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+
+const ATTENDANCE_PRESETS = ["出社9-18","出社10-19","出社11-20","テレ9-18","テレ10-19","半休（午前）","半休（午後）","休み"];
+
+const formatDateFull = (ds) => {
+  const d = new Date(ds + "T00:00:00");
+  return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日　${DAYS[d.getDay()]}曜日`;
+};
+
+function App() {
+  const today = new Date().toISOString().split("T")[0];
+  const [tab, setTab] = useState("memo");
+  const [date, setDate] = useState(today);
+  const [attendToday, setAttendToday] = useState("");
+  const [attendNext, setAttendNext] = useState("");
+  const [mtgs, setMtgs] = useState([nb()]);
+  const [routines, setRoutines] = useState(() => load("tm_routines", []));
+  const [tasks, setTasks] = useState([nt()]);
+  const [memo, setMemo] = useState("特になし");
+
+  // テンプレート
+  const [mtgTemplates, setMtgTemplates] = useState(() => load("tm_mtg_tpl", []));
+  const [taskTemplates, setTaskTemplates] = useState(() => load("tm_task_tpl", []));
+  const [newMtgTpl, setNewMtgTpl] = useState("");
+  const [newTaskTpl, setNewTaskTpl] = useState("");
+  const [savedMsg, setSavedMsg] = useState(false);
+  const [output, setOutput] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => { save("tm_routines", routines); }, [routines]);
+  useEffect(() => { save("tm_mtg_tpl", mtgTemplates); }, [mtgTemplates]);
+  useEffect(() => { save("tm_task_tpl", taskTemplates); }, [taskTemplates]);
+
+  // MTG
+  const addMtg = () => setMtgs(p => [...p, nb()]);
+  const removeMtg = (id) => setMtgs(p => p.filter(i => i.id !== id));
+  const updateMtg = (id, f, v) => setMtgs(p => p.map(i => i.id === id ? {...i, [f]: v} : i));
+  const applyMtgTpl = (tplName) => {
+    setMtgs(prev => {
+      const emptyIdx = prev.findIndex(m => m.name.trim() === "");
+      if (emptyIdx >= 0) {
+        return prev.map((m, i) => i === emptyIdx ? {...m, name: tplName} : m);
+      }
+      return [...prev, {...nb(), name: tplName}];
+    });
+  };
+
+  // Routines
+  const addRoutine = () => setRoutines(p => [...p, nr()]);
+  const removeRoutine = (id) => setRoutines(p => p.filter(i => i.id !== id));
+  const updateRoutine = (id, v) => setRoutines(p => p.map(i => i.id === id ? {...i, name: v} : i));
+
+  // Tasks
+  const addTask = () => setTasks(p => [...p, nt()]);
+  const removeTask = (id) => setTasks(p => p.filter(i => i.id !== id));
+  const updateTask = (id, v) => setTasks(p => p.map(i => i.id === id ? {...i, name: v} : i));
+  const applyTaskTpl = (name) => {
+    const empty = tasks.find(t => !t.name);
+    if (empty) updateTask(empty.id, name);
+    else setTasks(p => [...p, {...nt(), name}]);
+  };
+
+  // MTG templates
+  const addMtgTpl = () => { if (!newMtgTpl.trim()) return; setMtgTemplates(p => [...p, newMtgTpl.trim()]); setNewMtgTpl(""); };
+  const removeMtgTpl = (i) => setMtgTemplates(p => p.filter((_, j) => j !== i));
+
+  // Task templates
+  const addTaskTpl = () => { if (!newTaskTpl.trim()) return; setTaskTemplates(p => [...p, newTaskTpl.trim()]); setNewTaskTpl(""); };
+  const removeTaskTpl = (i) => setTaskTemplates(p => p.filter((_, j) => j !== i));
+
+  const generate = () => {
+    const sep = "---------------------------------------------";
+    const lines = [];
+    lines.push(sep);
+    lines.push(`　　　${formatDateFull(date)}`);
+    lines.push(sep);
+    if (attendToday.trim()) lines.push(`　　　本日：${attendToday.trim()}`);
+    if (attendNext.trim())  lines.push(`　　　次回：${attendNext.trim()}`);
+    if (attendToday.trim() || attendNext.trim()) lines.push(sep);
+    const validMtgs = mtgs.filter(m => m.name.trim());
+    if (validMtgs.length > 0) {
+      lines.push("◎MTG");
+      validMtgs.forEach(m => {
+        let line = `・${m.name.trim()}`;
+        if (m.time.trim()) line += `（${m.time.trim()}～）`;
+        if (m.freq.trim()) line += `　${m.freq.trim()}`;
+        lines.push(line);
+      });
+    }
+    const validRoutines = routines.filter(r => r.name.trim());
+    if (validRoutines.length > 0) {
+      if (validMtgs.length > 0) lines.push("");
+      lines.push("◎ルーティン");
+      validRoutines.forEach(r => lines.push(`・${r.name.trim()}`));
+    }
+    const validTasks = tasks.filter(t => t.name.trim());
+    if (validTasks.length > 0) {
+      lines.push("");
+      lines.push("▼業務内容");
+      validTasks.forEach(t => lines.push(`◉${t.name.trim()}`));
+    }
+    lines.push("");
+    lines.push("（メモ・伝言）");
+    lines.push(memo.trim() || "特になし");
+    setOutput(lines.join("\n"));
+  };
+
+  const copy = () => {
+    navigator.clipboard.writeText(output).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  const AttendField = ({ label, value, onChange }) => (
+    <div className="field">
+      <label>{label}</label>
+      <div className="preset-chips">
+        {ATTENDANCE_PRESETS.map(p => (
+          <button key={p} className={`preset-chip ${value === p ? "active" : ""}`} onClick={() => onChange(value === p ? "" : p)}>{p}</button>
+        ))}
+      </div>
+      <input type="text" placeholder="または直接入力" value={value} onChange={e => onChange(e.target.value)} />
+    </div>
+  );
+
+  return (
+    <div className="app">
+      <div className="sidebar">
+        <div className="logo">Task Memo<span>Daily Planner</span></div>
+        <button className={`nav-btn ${tab==="memo"?"on":""}`} onClick={() => setTab("memo")}>
+          <span className="nav-icon">📋</span><span>メモを書く</span>
+        </button>
+        <button className={`nav-btn ${tab==="settings"?"on":""}`} onClick={() => setTab("settings")}>
+          <span className="nav-icon">⚙️</span><span>設定</span>
+        </button>
+      </div>
+
+      <div className="main">
+        {tab === "memo" && <>
+          <div className="page-title">本日のタスクメモ</div>
+          <div className="page-sub">Daily Task Planner</div>
+
+          <div className="card">
+            <div className="card-label"><span className="card-label-dot"></span>日付</div>
+            <div className="field">
+              <input type="date" value={date} onChange={e => setDate(e.target.value)} />
+              <div style={{fontSize:13,color:"var(--text2)",marginTop:6,letterSpacing:".06em"}}>{formatDateFull(date)}</div>
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="card-label"><span className="card-label-dot"></span>勤務情報</div>
+            <div style={{display:"flex",flexDirection:"column",gap:16}}>
+              <AttendField label="本日" value={attendToday} onChange={setAttendToday} />
+              <AttendField label="次回" value={attendNext} onChange={setAttendNext} />
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="card-label"><span className="card-label-dot"></span>◎ MTG</div>
+            {mtgTemplates.length > 0 && (
+              <div className="tpl-area">
+                <div className="tpl-label">Templates — クリックして追加</div>
+                <div className="tpl-chips">
+                  {mtgTemplates.map((tpl,i) => (
+                    <button key={i} className="tpl-chip" onClick={() => applyMtgTpl(tpl)}>{tpl}</button>
+                  ))}
+                </div>
+                <hr className="sep" />
+              </div>
+            )}
+            {mtgs.map((m, idx) => (
+              <div className="item-row" key={m.id}>
+                <span className="item-bullet">・</span>
+                <input className="item-name" type="text" placeholder={`MTG名 ${idx+1}`} value={m.name} onChange={e => updateMtg(m.id,"name",e.target.value)} />
+                <input className="item-time" type="text" placeholder="時間（例：10:10）" value={m.time} onChange={e => updateMtg(m.id,"time",e.target.value)} />
+                <input className="item-freq" type="text" placeholder="頻度（例：毎週金曜）" value={m.freq} onChange={e => updateMtg(m.id,"freq",e.target.value)} />
+                {mtgs.length > 1 && <button className="btn-icon" onClick={() => removeMtg(m.id)}>×</button>}
+              </div>
+            ))}
+            <button className="btn-add" onClick={addMtg}>＋ MTGを追加</button>
+          </div>
+
+          <div className="card">
+            <div className="card-label">
+              <span className="card-label-dot"></span>◎ ルーティン
+              <span className="fixed-badge">固定</span>
+            </div>
+            {routines.length === 0
+              ? <div style={{fontSize:12,color:"var(--text3)",letterSpacing:".06em"}}>「設定」タブで登録してください</div>
+              : routines.filter(r => r.name.trim()).map(r => (
+                  <div key={r.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                    <span style={{color:"var(--accent)",fontSize:13}}>・</span>
+                    <span style={{fontSize:13,color:"var(--text2)"}}>{r.name}</span>
+                  </div>
+                ))
+            }
+            <div style={{marginTop:8}}>
+              <button className="btn-add" onClick={() => setTab("settings")}>⚙ ルーティンを編集</button>
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="card-label"><span className="card-label-dot"></span>▼ 業務内容</div>
+            {taskTemplates.length > 0 && (
+              <div className="tpl-area">
+                <div className="tpl-label">Templates — クリックして追加</div>
+                <div className="tpl-chips">
+                  {taskTemplates.map((tpl,i) => (
+                    <button key={i} className="tpl-chip" onClick={() => applyTaskTpl(tpl)}>{tpl}</button>
+                  ))}
+                </div>
+                <hr className="sep" />
+              </div>
+            )}
+            {tasks.map((t, idx) => (
+              <div className="task-item" key={t.id}>
+                <span className="task-bullet">◉</span>
+                <input type="text" placeholder={`業務 ${idx+1}`} value={t.name} onChange={e => updateTask(t.id, e.target.value)} />
+                {tasks.length > 1 && <button className="btn-icon" onClick={() => removeTask(t.id)}>×</button>}
+              </div>
+            ))}
+            <button className="btn-add" onClick={addTask}>＋ 業務を追加</button>
+          </div>
+
+          <div className="card">
+            <div className="card-label"><span className="card-label-dot"></span>（メモ・伝言）</div>
+            <textarea rows={3} placeholder="特になし" value={memo} onChange={e => setMemo(e.target.value)} />
+          </div>
+
+          <button className="btn-generate" onClick={generate}>メモを生成する</button>
+
+          {output && (
+            <div className="output-card">
+              <div className="output-label">出力プレビュー</div>
+              <button className={`btn-copy ${copied?"ok":""}`} onClick={copy}>{copied?"コピー済 ✓":"コピー"}</button>
+              <div className="output-text">{output}</div>
+            </div>
+          )}
+        </>}
+
+        {tab === "settings" && <>
+          <div className="page-title">設定</div>
+          <div className="page-sub">Routines & Templates</div>
+
+          {/* ルーティン */}
+          <div className="card">
+            <div className="card-label"><span className="card-label-dot"></span>◎ ルーティン（固定）</div>
+            <div className="info-box">ここで登録した項目は毎日のルーティン欄に自動表示されます。</div>
+            {routines.map((r, idx) => (
+              <div className="item-row" key={r.id}>
+                <span className="item-bullet">・</span>
+                <input type="text" placeholder={`ルーティン ${idx+1}`} value={r.name} onChange={e => updateRoutine(r.id, e.target.value)} />
+                <button className="btn-icon" onClick={() => removeRoutine(r.id)}>×</button>
+              </div>
+            ))}
+            <button className="btn-add" onClick={addRoutine}>＋ ルーティンを追加</button>
+          </div>
+
+          {/* MTGテンプレート */}
+          <div className="card">
+            <div className="card-label"><span className="card-label-dot"></span>◎ MTG テンプレート</div>
+            <div className="info-box">よく使うMTG名を登録しておくと「メモを書く」タブでワンクリックで追加できます。</div>
+            {mtgTemplates.map((tpl,i) => (
+              <div className="tpl-row" key={i}>
+                <div className="tpl-item">{tpl}</div>
+                <button className="btn-icon" onClick={() => removeMtgTpl(i)}>×</button>
+              </div>
+            ))}
+            <div className="tpl-add-row">
+              <input className="tpl-add-in" type="text" placeholder="MTG名（例：朝会、定例会）" value={newMtgTpl} onChange={e => setNewMtgTpl(e.target.value)} onKeyDown={e => e.key==="Enter" && addMtgTpl()} />
+              <button className="btn-tpl-add" onClick={addMtgTpl}>追加</button>
+            </div>
+          </div>
+
+          {/* 業務内容テンプレート */}
+          <div className="card">
+            <div className="card-label"><span className="card-label-dot"></span>▼ 業務内容 テンプレート</div>
+            <div className="info-box">よく使う業務名を登録しておくと「メモを書く」タブでワンクリックで追加できます。</div>
+            {taskTemplates.map((tpl,i) => (
+              <div className="tpl-row" key={i}>
+                <div className="tpl-item">{tpl}</div>
+                <button className="btn-icon" onClick={() => removeTaskTpl(i)}>×</button>
+              </div>
+            ))}
+            <div className="tpl-add-row">
+              <input className="tpl-add-in" type="text" placeholder="業務名（例：デスクリサーチ）" value={newTaskTpl} onChange={e => setNewTaskTpl(e.target.value)} onKeyDown={e => e.key==="Enter" && addTaskTpl()} />
+              <button className="btn-tpl-add" onClick={addTaskTpl}>追加</button>
+            </div>
+          </div>
+
+          <div style={{display:"flex",alignItems:"center"}}>
+            <button className="btn-save" onClick={() => { setSavedMsg(true); setTimeout(()=>setSavedMsg(false),2200); }}>設定を保存する</button>
+            {savedMsg && <span className="saved-msg">✓ 保存しました</span>}
+          </div>
+        </>}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
